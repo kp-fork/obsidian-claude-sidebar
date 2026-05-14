@@ -58,9 +58,22 @@ def main():
     shell = sys.argv[3]
     shell_args = sys.argv[3:]  # Include shell as argv[0]
 
+    # On Linux, ask the kernel to send us SIGHUP if our parent dies.
+    # Catches paths where the plugin's tab-close handler doesn't fire
+    # and we'd otherwise be orphaned to init holding a live PTY tree.
+    if sys.platform.startswith('linux'):
+        try:
+            import ctypes
+            PR_SET_PDEATHSIG = 1
+            libc = ctypes.CDLL('libc.so.6', use_errno=True)
+            libc.prctl(PR_SET_PDEATHSIG, signal.SIGHUP, 0, 0, 0)
+        except Exception:
+            pass
+
     # Register signal handlers for cleanup BEFORE fork to avoid race condition
     signal.signal(signal.SIGTERM, cleanup_child)
     signal.signal(signal.SIGINT, cleanup_child)
+    signal.signal(signal.SIGHUP, cleanup_child)
 
     pid, fd = pty.fork()
     child_pid = pid  # Store for signal handler
