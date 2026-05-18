@@ -1,6 +1,6 @@
 # Claude Sidebar
 
-Run Claude Code in your Obsidian sidebar.
+Run Claude Code (and other agent CLIs) in your Obsidian sidebar.
 
 Built by [Derek Larson](https://dtlarson.com) - [Pairs with Delegate commands →](https://delegatewithclaude.com/commands)
 
@@ -19,60 +19,65 @@ Built by [Derek Larson](https://dtlarson.com) - [Pairs with Delegate commands �
 
 - macOS, Linux, or Windows
 - Python 3
-- [Claude Code](https://claude.com/claude-code)
+- An agent CLI — [Claude Code](https://claude.com/claude-code) (default), or any other [supported backend](#features)
 
 ## Installation
 
-### Quick Install (Mac/Linux)
+### From Community Plugins (recommended)
+
+Two ways:
+
+- **Install in Obsidian Settings:** click [obsidian://show-plugin?id=claude-sidebar](obsidian://show-plugin?id=claude-sidebar) to open the install screen inside Obsidian, then Install → Enable.
+- **Search in Obsidian:** Settings → Community Plugins → Browse → search "Claude Sidebar" → Install → Enable.
+
+Plugin listing: [community.obsidian.md/plugins/claude-sidebar](https://community.obsidian.md/plugins/claude-sidebar)
+
+**Windows:** See [Windows Setup](#windows-setup) below.
+
+### Manual Installation (Mac/Linux)
 
 In your vault folder, run:
 ```bash
-curl -sL https://github.com/derek-larson14/obsidian-claude-sidebar/archive/refs/heads/main.tar.gz | tar -xz -C .obsidian/plugins && mv .obsidian/plugins/obsidian-claude-sidebar-main .obsidian/plugins/claude-sidebar
+mkdir -p .obsidian/plugins/claude-sidebar && cd .obsidian/plugins/claude-sidebar && \
+  curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/main.js && \
+  curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/manifest.json && \
+  curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/styles.css
 ```
 
-Then in Obsidian: Settings → Community Plugins → Refresh → Enable "Claude Sidebar"
+Then in Obsidian: Settings → Community Plugins → Refresh → Enable "Claude Sidebar".
 
-**Windows:** See [Windows Setup](#windows-setup-experimental) below.
-
-### Manual Installation
-
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/derek-larson14/obsidian-claude-sidebar/releases)
-2. Create folder: `<your-vault>/.obsidian/plugins/claude-sidebar/`
-3. Copy the downloaded files into that folder
-4. Reload Obsidian and enable the plugin in Settings → Community Plugins
-
-### BRAT (Auto-Updates)
-
-1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
-2. In BRAT settings, click "Add Beta plugin"
-3. Enter: `derek-larson14/obsidian-claude-sidebar`
-4. Enable "Claude Sidebar" in Settings → Community Plugins
-
-BRAT handles updates automatically when new releases are published.
-
-### From Community Plugins
-
-Once approved, you'll be able to search for "Claude Sidebar" in Community Plugins → Browse.
-
-## Updating
-
-Paste into a Claude Code session from your vault:
-
-```
-Update the Claude Sidebar plugin. Download main.js, manifest.json, and styles.css from https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/ into .obsidian/plugins/claude-sidebar/. Tell me the old and new version numbers.
-```
-
-### Manual
+### Manual Updating
 
 In your vault folder, run:
 ```bash
-cd .obsidian/plugins/claude-sidebar
-curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/main.js
-curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/manifest.json
-curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/styles.css
+cd .obsidian/plugins/claude-sidebar && \
+  curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/main.js && \
+  curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/manifest.json && \
+  curl -LO https://github.com/derek-larson14/obsidian-claude-sidebar/releases/latest/download/styles.css
 ```
 
 Then restart Obsidian or disable/re-enable the plugin.
+
+### Windows Setup
+
+After installing the plugin (via Community Plugins or manually), add Windows-specific dependencies:
+
+1. Install Python 3 from [python.org](https://python.org)
+2. Install pywinpty into the Python the plugin will use:
+```bash
+py -m pip install pywinpty
+```
+
+Use `py -m pip` (not just `pip`) to avoid installing into a different Python interpreter than the one the plugin selects. If you see "pywinpty not installed" in the sidebar after installing, the error message will print the exact interpreter path — install pywinpty into that one.
+
+3. Pick whether to run Claude inside WSL or natively in `cmd.exe`. Configure in **Settings → Claude Sidebar → Shell** (Windows only — Linux/macOS always run `bash`):
+
+| Option | Spawns | Path translation |
+|--------|--------|------------------|
+| cmd.exe (default) | `cmd.exe` | none |
+| wsl.exe (WSL) | `wsl.exe` | Windows paths → Linux paths via `wslpath` |
+
+Use `wsl.exe` when your Claude install, Node, or git toolchain lives in a WSL distro. Vault paths sent to Claude (file path command, selection context, drag-drop, image paste, wikilink references) are converted to Linux form before reaching the CLI. Translation respects a custom `/etc/wsl.conf` `[automount]` root, so paths still resolve if your `C:\` mounts at `/c/` instead of `/mnt/c/`.
 
 ## Usage
 
@@ -100,34 +105,6 @@ https://github.com/user-attachments/assets/de98439a-8a1f-4a8a-9d02-44027d756462
 
 Want to use it on iOS or Android? See [Claude Anywhere](https://github.com/derek-larson14/claude-anywhere).
 
-### Windows Setup
-
-Windows requires additional dependencies:
-
-1. Install Python 3 from [python.org](https://python.org)
-2. Install pywinpty into the Python the plugin will use:
-```bash
-py -m pip install pywinpty
-```
-
-Use `py -m pip` (not just `pip`) to avoid installing into a different Python interpreter than the one the plugin selects. If you see "pywinpty not installed" in the sidebar after installing, the error message will print the exact interpreter path — install pywinpty into that one.
-
-3. Install the plugin (run from your vault folder in PowerShell):
-```powershell
-$u="https://github.com/derek-larson14/obsidian-claude-sidebar/archive/main.zip"; Invoke-WebRequest $u -OutFile s.zip; Expand-Archive s.zip .obsidian\plugins -Force; Move-Item ".obsidian\plugins\obsidian-claude-sidebar-main" ".obsidian\plugins\claude-sidebar" -Force; Remove-Item s.zip
-```
-
-4. Then in Obsidian: Settings → Community Plugins → Refresh → Enable "Claude Sidebar"
-
-5. On Windows, pick whether to run Claude inside WSL or natively in `cmd.exe`. Configure in **Settings → Claude Sidebar → Shell** (Windows only — Linux/macOS always run `bash`):
-
-| Option | Spawns | Path translation |
-|--------|--------|------------------|
-| cmd.exe (default) | `cmd.exe` | none |
-| wsl.exe (WSL) | `wsl.exe` | Windows paths → Linux paths via `wslpath` |
-
-Use `wsl.exe` when your Claude install, Node, or git toolchain lives in a WSL distro. Vault paths sent to Claude (file path command, selection context, drag-drop, image paste, wikilink references) are converted to Linux form before reaching the CLI. Translation respects a custom `/etc/wsl.conf` `[automount]` root, so paths still resolve if your `C:\` mounts at `/c/` instead of `/mnt/c/`.
-
 ## How It Works
 
 - [xterm.js](https://xtermjs.org/) for terminal emulation
@@ -144,7 +121,7 @@ The PTY scripts (`terminal_pty.py` for Unix, `terminal_win.py` for Windows) are 
 
 ## Contributing
 
-Hit a bug or want a new feature? Tell your coding agent to read `CLAUDE.md` in this repo. It will walk you through diagnosis, filing a report, or opening a PR.
+Hit a bug or want to develop a new feature? Point your coding agent at `CLAUDE.md` in this repo. It will walk you through diagnosis, filing a report, or opening a PR.
 
 ## License
 
