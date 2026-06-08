@@ -7227,6 +7227,33 @@ var TerminalView = class extends import_obsidian.ItemView {
     this.term.open(this.termHost);
     this.term.parser?.registerCsiHandler({ final: "I" }, () => true);
     this.term.parser?.registerCsiHandler({ final: "O" }, () => true);
+    // Make vault-relative file paths in the output clickable (open the note in Obsidian).
+    // xterm calls provideLinks lazily, per-line, only when the mouse hovers that row — no
+    // cost during output. We only link a path that resolves to a real file in the vault,
+    // so arbitrary path-looking text (URLs, code refs, version numbers) stays plain.
+    this.term.registerLinkProvider?.({
+      provideLinks: (y, callback) => {
+        const line = this.term?.buffer.active.getLine(y - 1);
+        if (!line) return callback(void 0);
+        const text = line.translateToString(true);
+        const links = [];
+        const re = /(?:[\w.\-]+\/)*[\w.\-]+\.\w+/g;
+        let m;
+        while ((m = re.exec(text)) !== null) {
+          const candidate = m[0];
+          const file = this.resolveVaultPath(candidate);
+          if (!file) continue;
+          const start = m.index + 1; // 1-based start column
+          const end = m.index + candidate.length; // 1-based, inclusive last cell
+          links.push({
+            text: candidate,
+            range: { start: { x: start, y }, end: { x: end, y } },
+            activate: () => this.openVaultFile(file)
+          });
+        }
+        callback(links.length ? links : void 0);
+      }
+    });
     // Handle image paste - use capture phase to intercept before xterm's textarea
     this.imagePasteHandler = async (e) => {
       // Only handle if terminal has focus
@@ -7436,6 +7463,34 @@ var TerminalView = class extends import_obsidian.ItemView {
     this.themeObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
     // Watch for Obsidian layout changes (sidebar resize, etc.)
     this.registerEvent(this.app.workspace.onLayoutChange(() => this.debouncedFit()));
+  }
+  // Resolve a candidate string to a real vault file, or null. Absolute/home paths and
+  // URLs are skipped. Falls back to basename linkpath resolution (e.g. a bare note name).
+  resolveVaultPath(candidate) {
+    if (!candidate) return null;
+    if (candidate.startsWith("/") || candidate.startsWith("~") || candidate.includes("://")) return null;
+    const direct = this.app.vault.getAbstractFileByPath(candidate);
+    if (direct instanceof import_obsidian.TFile) return direct;
+    const dest = this.app.metadataCache.getFirstLinkpathDest(candidate, "");
+    if (dest instanceof import_obsidian.TFile) return dest;
+    return null;
+  }
+  // Open (or focus, if already open) a vault file in a markdown leaf — never replaces the
+  // terminal leaf. Mirrors the leaf-selection logic in toggleFocus().
+  async openVaultFile(file) {
+    const mdLeaves = this.app.workspace.getLeavesOfType("markdown");
+    const already = mdLeaves.find((l) => l.view?.file?.path === file.path);
+    if (already) {
+      this.app.workspace.setActiveLeaf(already, { focus: true });
+      return;
+    }
+    const target = mdLeaves.filter((l) => !l.pinned)[0] || mdLeaves[0];
+    if (target) {
+      await target.openFile(file);
+      this.app.workspace.setActiveLeaf(target, { focus: true });
+    } else {
+      await this.app.workspace.getLeaf(true).openFile(file);
+    }
   }
   fit() {
     if (!this.term || !this.fitAddon) return;
